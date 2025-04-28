@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Scan Tumor Detector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Brain Scan Tumor Detector</h1>
+            <p>Upload CT or MRI brain scans to detect tumors</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Analiz için beyin tarama (CT/MRI) resminizi buraya sürükleyin veya seçin</p>
+                    <input type="file" id="imageUpload" accept="image/*" hidden>
+                    <button id="uploadBtn" class="btn primary">Resim Seç</button>
+                </div>
+
+                <div class="example-scans" id="exampleScansSection">
+                    <h4>Veya Örnek Taramaları Deneyin:</h4>
+                    <div class="example-buttons">
+                        <button class="btn secondary example-btn" data-src="static/img/example_healthy.jpg" data-result="healthy">
+                            <i class="fas fa-brain"></i> Örnek Sağlıklı
+                        </button>
+                        <button class="btn secondary example-btn" data-src="static/img/example_tumor.jpg" data-result="tumor">
+                            <i class="fas fa-viruses"></i> Örnek Tümörlü
+                        </button>
+                    </div>
+                     <p class="disclaimer-note">(Not: Örnek görseller temsilidir.)</p>
+                </div>
+            </div>
+
+            <div class="preview-section" id="previewSection" style="display: none; opacity: 0;">
+                <h3>Yüklenen Resim</h3>
+                <div class="image-preview">
+                    <img id="imagePreview" src="#" alt="Preview">
+                </div>
+                <div class="preview-controls">
+                    <button id="submitBtn" class="btn primary">Analyze Scan</button>
+                    <button id="cancelBtn" class="btn secondary">Cancel</button>
+                </div>
+                <div class="loader" id="loader">
+                    <div class="spinner"></div>
+                    <p>Tarama analiz ediliyor...</p>
+                </div>
+                <div id="resultDisplay" style="display: none;">
+                    <div class="result-icon">
+                        <i id="healthyIcon" class="fas fa-check-circle" style="display: none;"></i>
+                        <i id="tumorIcon" class="fas fa-exclamation-triangle" style="display: none;"></i>
+                    </div>
+                    <div class="result-text">
+                        <h4 id="resultTitle"></h4>
+                        <p id="resultDescription"></p>
+                        <p id="confidenceScore" class="confidence-score"></p>
+                    </div>
+                </div>
+                <p class="disclaimer"><b>Uyarı:</b> Bu sonuçlar yalnızca demo amaçlıdır ve simülasyondur. Tıbbi bir tanı değeri taşımaz.</p>
+                <button id="newScanBtn" class="btn primary" style="display: none;">Yeni Tarama Analiz Et</button>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="result-card">
+                    <h3>Analysis Result</h3>
+                    <div class="loader" id="loader">
+                        <div class="spinner"></div>
+                        <p>Analyzing your scan...</p>
+                    </div>
+                    <div id="resultDisplay" style="display: none;">
+                        <div class="result-icon">
+                            <i id="healthyIcon" class="fas fa-check-circle" style="display: none;"></i>
+                            <i id="tumorIcon" class="fas fa-exclamation-triangle" style="display: none;"></i>
+                        </div>
+                        <div class="result-text">
+                            <h4 id="resultTitle"></h4>
+                            <p id="resultDescription"></p>
+                        </div>
+                    </div>
+                    <button id="newScanBtn" class="btn primary" style="display: none;">Analyze New Scan</button>
+                </div>
+            </div>
+        </main>
+
+        <section class="info-section" id="howItWorksSection">
+            <h2>Nasıl Çalışıyor? (Planlanan Sistem)</h2>
+            <div class="steps">
+                <div class="step">
+                    <i class="fas fa-upload"></i>
+                    <h4>1. Yükleme</h4>
+                    <p>Kullanıcı beyin taramasını (CT/MRI) yükler.</p>
+                </div>
+                <div class="step">
+                    <i class="fas fa-cogs"></i>
+                    <h4>2. Ön İşleme</h4>
+                    <p>Resim, modelin anlayacağı formata getirilir (boyutlandırma, normalizasyon vb.).</p>
+                </div>
+                <div class="step">
+                    <i class="fas fa-brain"></i>
+                    <h4>3. Model Tahmini</h4>
+                    <p>Önceden eğitilmiş InceptionV3 modeli, resmi analiz ederek tümör olasılığını tahmin eder.</p>
+                </div>
+                <div class="step">
+                    <i class="fas fa-poll"></i>
+                    <h4>4. Sonuç</h4>
+                    <p>Tahmin sonucu ("Sağlıklı" veya "Tümörlü") kullanıcıya gösterilir.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="info-section" id="projectInfoSection">
+            <h2>Proje Hakkında</h2>
+            <p>Bu proje, derin öğrenme teknikleri kullanarak beyin taramalarındaki tümörleri tespit etmeyi amaçlayan bir web uygulamasıdır. Şu anki versiyon, planlanan sistemin bir önizlemesi ve simülasyonudur.</p>
+            <p><strong>Teknoloji (Planlanan):</strong> Python (Flask/FastAPI), TensorFlow/Keras (InceptionV3 Transfer Learning), HTML, CSS, JavaScript.</p>
+            <p>Bu demo, <strong>"Genç Fikirler Yeni Beyinler"</strong> Sempozyumu için hazırlanmıştır.</p>
+            </div>
+        </section>
+
+        <footer>
+            <p>Beyin Tümörü Tespit Sistemi | Fırat Üniversitesi | Genç Fikirler Yeni Beyinler</p>
+        </footer>
+    </div>
+
+    <script src="static/js/main.js"></script>
+</body>
+</html> 
