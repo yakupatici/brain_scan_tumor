@@ -20,8 +20,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const exampleScanButtons = document.querySelectorAll('.example-btn'); // Added example buttons
 
     // API Configuration
-    const API_URL = 'https://brainscanapi-production.up.railway.app';
-    const USE_REAL_API = true; // API modunu kontrol eden değişken (false: simülasyon modu, true: gerçek API modu)
+    const API_URL = 'https://brainscanapi-production.up.railway.app'; // Exact URL from Railway logs
+    let USE_REAL_API = true; // Always use real API
+    let currentApiUrl = API_URL;
 
     let currentAnalysisResult = null; // To store the result type for example scans
     let selectedFile = null; // To store the selected file
@@ -134,27 +135,75 @@ document.addEventListener('DOMContentLoaded', function() {
         resultDisplay.style.display = 'none';
         newScanBtn.style.display = 'none';
         
+        // Status message element for loading updates
+        const statusMessage = document.createElement('div');
+        statusMessage.id = 'statusMessage';
+        statusMessage.style.color = '#666';
+        statusMessage.style.textAlign = 'center';
+        statusMessage.style.marginTop = '10px';
+        statusMessage.style.fontSize = '0.9em';
+        statusMessage.textContent = 'Görüntü analiz ediliyor...';
+        loader.appendChild(statusMessage);
+        
         // Remove previous all-scores element if exists
         const prevAllScoresElement = document.querySelector('.all-scores');
         if (prevAllScoresElement) {
             prevAllScoresElement.remove();
         }
         
-        if (USE_REAL_API && selectedFile) {
-            console.log('Gerçek API çağrısı yapılıyor...');
+        if (selectedFile) {
+            console.log(`API çağrısı yapılıyor... (${currentApiUrl})`);
             try {
                 // Create FormData for file upload
                 const formData = new FormData();
                 formData.append('file', selectedFile);
                 
-                // Send request to API
-                const response = await fetch(`${API_URL}/predict`, {
-                    method: 'POST',
-                    body: formData
-                });
+                // Send request to API with retry
+                let response;
+                let retryCount = 0;
+                const maxRetries = 5; // Increase max retries for 502 errors
                 
-                if (!response.ok) {
-                    throw new Error(`API yanıt hatası: ${response.status}`);
+                while (retryCount < maxRetries) {
+                    try {
+                        if (retryCount > 0) {
+                            statusMessage.textContent = `Railway API uyandırılıyor... (${retryCount}/${maxRetries})`;
+                        }
+                        
+                        response = await fetch(`${currentApiUrl}/predict`, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'Accept': 'application/json'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            break; // Success, exit retry loop
+                        } else if (response.status === 502) {
+                            // Railway 502 error - server is available but application failed to respond
+                            // This is common when the app is waking up from sleep
+                            console.warn(`Railway 502 hatası, yeniden deneniyor (${retryCount+1}/${maxRetries})...`);
+                            statusMessage.textContent = `Model uyanıyor, lütfen bekleyin... (${retryCount+1}/${maxRetries})`;
+                            retryCount++;
+                            
+                            // Wait longer between retries for 502 errors (increasing backoff)
+                            await new Promise(r => setTimeout(r, 2000 * retryCount)); 
+                        } else {
+                            console.warn(`API yanıt hatası, yeniden deneniyor (${retryCount+1}/${maxRetries}): ${response.status}`);
+                            statusMessage.textContent = `API hatası, yeniden deneniyor... (${retryCount+1}/${maxRetries})`;
+                            retryCount++;
+                            await new Promise(r => setTimeout(r, 1000)); // Wait 1 second before retrying
+                        }
+                    } catch (fetchError) {
+                        console.warn(`Fetch hatası, yeniden deneniyor (${retryCount+1}/${maxRetries}): ${fetchError.message}`);
+                        statusMessage.textContent = `Bağlantı hatası, yeniden deneniyor... (${retryCount+1}/${maxRetries})`;
+                        retryCount++;
+                        await new Promise(r => setTimeout(r, 1000)); // Wait 1 second before retrying
+                    }
+                }
+                
+                if (!response || !response.ok) {
+                    throw new Error(`API yanıt hatası: ${response ? response.status : 'Bağlantı hatası'}`);
                 }
                 
                 const result = await response.json();
@@ -162,73 +211,61 @@ document.addEventListener('DOMContentLoaded', function() {
                 
             } catch (error) {
                 console.error('API hatası:', error);
-                // Fallback to simulation if API fails
-                alert(`API hatası: ${error.message}. Simülasyon moduna geçiliyor.`);
-                simulateResults();
+                alert(`API hatası: ${error.message}. Lütfen ağ bağlantınızı kontrol edin ve tekrar deneyin.`);
+                resetAll(); // Go back to upload screen
             }
-        } else {
-            // Simulate results for example images or when API is disabled
-            console.log('Simülasyon modu kullanılıyor...');
-            setTimeout(simulateResults, 1500);
+        } else if (currentAnalysisResult) {
+            // For example images, use predetermined results with actual API format
+            console.log('Örnek görüntü için önceden belirlenmiş sonuç kullanılıyor...');
+            
+            // Create result object in the same format as API would provide
+            const result = {
+                prediction: currentAnalysisResult === 'healthy' ? 'Sağlıklı' : 'Tümör',
+                confidence: 95.5,
+                scores: {
+                    'Sağlıklı': currentAnalysisResult === 'healthy' ? 95.5 : 4.5,
+                    'Tümör': currentAnalysisResult === 'tumor' ? 95.5 : 2.3,
+                    'Enfarkt': 1.1,
+                    'Kanama': 1.1
+                }
+            };
+            
+            displayResults(result, false);
         }
-    }
-    
-    function simulateResults() {
-        // Simülasyon için tahmin oluştur
-        const isExample = currentAnalysisResult !== null;
-        const prediction = isExample ? 
-            (currentAnalysisResult === 'healthy' ? 'Sağlıklı' : 'Tümör') : 
-            ['Sağlıklı', 'Enfarkt', 'Tümör', 'Kanama'][Math.floor(Math.random() * 4)];
-        
-        const confidence = (Math.random() * (99 - 85) + 85).toFixed(1);
-        
-        // Tüm skorları oluştur
-        const allClasses = ['Sağlıklı', 'Enfarkt', 'Tümör', 'Kanama'];
-        const scores = {};
-        
-        allClasses.forEach(cls => {
-            scores[cls] = cls === prediction ? 
-                parseFloat(confidence) : 
-                parseFloat((Math.random() * 20).toFixed(1));
-        });
-        
-        // Simüle edilmiş sonuç objesi
-        const simulatedResult = {
-            prediction: prediction,
-            confidence: parseFloat(confidence),
-            scores: scores
-        };
-        
-        displayResults(simulatedResult, true);
     }
     
     function displayResults(result, isSimulation) {
         loader.style.display = 'none';
+        // Remove status message if exists
+        const statusMessage = document.getElementById('statusMessage');
+        if (statusMessage) {
+            statusMessage.remove();
+        }
+        
         resultDisplay.style.display = 'block';
         newScanBtn.style.display = 'inline-block';
         
         const prediction = result.prediction;
         const confidence = result.confidence.toFixed(1);
-        const simulationText = isSimulation ? ' (Simülasyon)' : '';
         
         if (prediction === 'Sağlıklı') {
             healthyIcon.style.display = 'inline-block';
             tumorIcon.style.display = 'none';
-            resultTitle.textContent = `Sağlıklı Beyin Taraması${simulationText}`;
+            resultTitle.textContent = 'Sağlıklı Beyin Taraması';
             resultTitle.style.color = 'var(--success-color)';
             resultDescription.textContent = 'Bu beyin taramasında anormal bulgu tespit edilmedi.';
         } else {
             healthyIcon.style.display = 'none';
             tumorIcon.style.display = 'inline-block';
-            resultTitle.textContent = `${prediction} Tespit Edildi${simulationText}`;
+            resultTitle.textContent = `${prediction} Tespit Edildi`;
             resultTitle.style.color = 'var(--danger-color)';
             resultDescription.textContent = `Bu beyin taramasında ${prediction.toLowerCase()} belirtileri tespit edildi.`;
         }
         
-        confidenceScore.textContent = `Tahmin Güveni${simulationText}: %${confidence}`;
+        confidenceScore.textContent = `Tahmin Güveni: %${confidence}`;
         
         // Tüm skorları göster
-        let scoresText = `Tüm sonuçlar${simulationText}: `;
+        let scoresText = 'Tüm sonuçlar: ';
         const allClasses = Object.keys(result.scores);
         
         allClasses.forEach(cls => {
@@ -263,10 +300,41 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // API'yi başlangıçta uyandır
-    fetch(API_URL)
-        .then(response => console.log('API hazır:', response.status))
-        .catch(error => console.log('API uyandırma hatası (önemli değil):', error));
+    // Improved API wakeup
+    async function wakeupAPI() {
+        try {
+            console.log('API uyanıyor...');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+            
+            const response = await fetch(`${currentApiUrl}/health`, {
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                console.log('API hazır:', response.status);
+                return true;
+            } else {
+                console.warn(`API uyanma hatası: ${response.status}`);
+                return true; // Assume it's working anyway, just slow
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.warn('API uyanma zaman aşımına uğradı, ancak devam ediyoruz...');
+                return true; // Continue anyway, the API might just be slow to respond
+            }
+            console.warn('API uyandırma hatası:', error.message);
+            return true; // Assume it's working, might just be connection issue
+        }
+    }
+
+    // Call wakeupAPI but don't show simulation notice anymore
+    wakeupAPI();
 
     // Ensure initial state respects transitions
     resetAll(); // Call resetAll to set the initial view correctly
