@@ -124,35 +124,91 @@ document.addEventListener('DOMContentLoaded', function() {
         resultDisplay.style.display = 'none';
         newScanBtn.style.display = 'none'; // Hide button initially
         
-        // Simulate processing
-        setTimeout(() => {
+        // Get file
+        const file = imageUpload.files.length > 0 ? imageUpload.files[0] : null;
+        const formData = new FormData();
+        
+        try {
+            if (file) {
+                // User uploaded file
+                formData.append('file', file);
+            } else if (imagePreview.src && imagePreview.src !== '#' && imagePreview.src !== '') {
+                // Example image was used - fetch it as blob
+                fetch(imagePreview.src)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        formData.append('file', blob, 'image.jpg');
+                        callApi(formData);
+                    })
+                    .catch(error => {
+                        showError('Görüntü işlenirken hata oluştu: ' + error.message);
+                    });
+                return; // Exit early as we'll call the API in the promise chain
+            } else {
+                showError('Lütfen bir görüntü yükleyin');
+                return;
+            }
+            
+            // If we have a direct file (not from example), call API directly
+            callApi(formData);
+            
+        } catch (error) {
+            showError('İşlem sırasında hata oluştu: ' + error.message);
+        }
+        
+        function callApi(formData) {
+            // API URL - replace with your Render URL
+            const apiUrl = 'https://brain-scan-api.onrender.com/predict';
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Sunucu hatası: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(result => {
+                // Display results
+                loader.style.display = 'none';
+                resultDisplay.style.display = 'block';
+                newScanBtn.style.display = 'inline-block';
+                
+                const prediction = result.prediction;
+                const confidence = result.confidence;
+                
+                if (prediction === 'Sağlıklı') {
+                    healthyIcon.style.display = 'inline-block';
+                    tumorIcon.style.display = 'none';
+                    resultTitle.textContent = 'Sağlıklı Beyin Taraması';
+                    resultTitle.style.color = 'var(--success-color)';
+                    resultDescription.textContent = 'Bu beyin taramasında anormal bulgu tespit edilmedi.';
+                } else {
+                    healthyIcon.style.display = 'none';
+                    tumorIcon.style.display = 'inline-block';
+                    resultTitle.textContent = `${prediction} Tespit Edildi`;
+                    resultTitle.style.color = 'var(--danger-color)';
+                    resultDescription.textContent = `Bu beyin taramasında ${prediction.toLowerCase()} belirtileri tespit edildi.`;
+                }
+                
+                confidenceScore.textContent = `Tahmin Güveni: %${confidence}`;
+                currentAnalysisResult = null;
+            })
+            .catch(error => {
+                showError(error.message);
+            });
+        }
+        
+        function showError(message) {
             loader.style.display = 'none';
             resultDisplay.style.display = 'block';
-            newScanBtn.style.display = 'inline-block'; // Show button after result
-            
-            // Determine result: use pre-defined for examples, random for uploads
-            const isHealthy = currentAnalysisResult ? (currentAnalysisResult === 'healthy') : (Math.random() > 0.5);
-            // Simulate a confidence score
-            const confScore = (Math.random() * (99 - 85) + 85).toFixed(1); // Random score between 85.0 and 99.0
-            
-            if (isHealthy) {
-                healthyIcon.style.display = 'inline-block';
-                tumorIcon.style.display = 'none';
-                resultTitle.textContent = 'Sağlıklı Beyin Taraması (Simülasyon)';
-                resultTitle.style.color = 'var(--success-color)';
-                resultDescription.textContent = 'Bu beyin taramasında tümör belirtisi tespit edilmedi.';
-                confidenceScore.textContent = `Tahmin Güveni (Simüle): %${confScore}`;
-            } else {
-                healthyIcon.style.display = 'none';
-                tumorIcon.style.display = 'inline-block';
-                resultTitle.textContent = 'Tümör Tespit Edildi (Simülasyon)';
-                resultTitle.style.color = 'var(--danger-color)';
-                resultDescription.textContent = 'Bu beyin taramasında potansiyel tümör belirtileri tespit edildi.';
-                confidenceScore.textContent = `Tahmin Güveni (Simüle): %${confScore}`;
-            }
-            // Reset currentAnalysisResult after displaying the result
-            currentAnalysisResult = null;
-        }, 1500); // Slightly shorter simulation time
+            resultTitle.textContent = 'İşlem Hatası';
+            resultTitle.style.color = 'var(--danger-color)';
+            resultDescription.textContent = message;
+            newScanBtn.style.display = 'inline-block';
+        }
     }
     
     function resetUpload() {
