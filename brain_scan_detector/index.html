@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brain Scan Tumor Detector</title>
+    <meta name="description" content="Beyin taramalarında tümör, enfarkt, kanama gibi bulguları tespit etmeye yardımcı olan derin öğrenme tabanlı analiz aracı">
+    <meta name="keywords" content="beyin taraması, tümör tespiti, derin öğrenme, CT, MRI, yapay zeka">
+    <meta name="author" content="İzmir Ekonomi Üniversitesi">
+    <title>Beyin Taraması Analiz Sistemi</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -13,8 +16,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>Brain Scan Tumor Detector</h1>
-            <p>Upload CT or MRI brain scans to detect tumors</p>
+            <h1>Beyin Taraması Analiz Sistemi</h1>
+            <p>CT veya MRI beyin taramalarını yapay zeka ile analiz edin</p>
         </header>
 
         <main>
@@ -36,18 +39,18 @@
                             <i class="fas fa-viruses"></i> Örnek Tümörlü
                         </button>
                     </div>
-                     <p class="disclaimer-note">(Not: Örnek görseller temsilidir.)</p>
+                    <p class="disclaimer-note">(Not: Örnek görseller temsilidir.)</p>
                 </div>
             </div>
 
             <div class="preview-section" id="previewSection" style="display: none; opacity: 0;">
                 <h3>Yüklenen Resim</h3>
                 <div class="image-preview">
-                    <img id="imagePreview" src="#" alt="Preview">
+                    <img id="imagePreview" src="#" alt="Beyin taraması önizleme">
                 </div>
                 <div class="preview-controls">
-                    <button id="submitBtn" class="btn primary">Analyze Scan</button>
-                    <button id="cancelBtn" class="btn secondary">Cancel</button>
+                    <button id="submitBtn" class="btn primary">Analiz Et</button>
+                    <button id="cancelBtn" class="btn secondary">İptal</button>
                 </div>
                 <div class="loader" id="loader">
                     <div class="spinner"></div>
@@ -64,16 +67,16 @@
                         <p id="confidenceScore" class="confidence-score"></p>
                     </div>
                 </div>
-                <p class="disclaimer"><b>Uyarı:</b> Bu sonuçlar yalnızca demo amaçlıdır ve simülasyondur. Tıbbi bir tanı değeri taşımaz.</p>
+                <p class="disclaimer"><b>Uyarı:</b> Bu sonuçlar tanı amaçlı değildir. Mutlaka bir sağlık profesyoneline danışınız.</p>
                 <button id="newScanBtn" class="btn primary" style="display: none;">Yeni Tarama Analiz Et</button>
             </div>
 
             <div class="results-section" id="resultsSection" style="display: none;">
                 <div class="result-card">
-                    <h3>Analysis Result</h3>
+                    <h3>Analiz Sonucu</h3>
                     <div class="loader" id="loader">
                         <div class="spinner"></div>
-                        <p>Analyzing your scan...</p>
+                        <p>Tarama analiz ediliyor...</p>
                     </div>
                     <div id="resultDisplay" style="display: none;">
                         <div class="result-icon">
@@ -85,13 +88,13 @@
                             <p id="resultDescription"></p>
                         </div>
                     </div>
-                    <button id="newScanBtn" class="btn primary" style="display: none;">Analyze New Scan</button>
+                    <button id="newScanBtn" class="btn primary" style="display: none;">Yeni Tarama Analiz Et</button>
                 </div>
             </div>
         </main>
 
         <section class="info-section" id="howItWorksSection">
-            <h2>Nasıl Çalışıyor? (Planlanan Sistem)</h2>
+            <h2>Nasıl Çalışıyor?</h2>
             <div class="steps">
                 <div class="step">
                     <i class="fas fa-upload"></i>
@@ -101,31 +104,30 @@
                 <div class="step">
                     <i class="fas fa-cogs"></i>
                     <h4>2. Ön İşleme</h4>
-                    <p>Resim, modelin anlayacağı formata getirilir (boyutlandırma, normalizasyon vb.).</p>
+                    <p>Resim, modelin anlayacağı formata getirilir (boyutlandırma, normalizasyon).</p>
                 </div>
                 <div class="step">
                     <i class="fas fa-brain"></i>
                     <h4>3. Model Tahmini</h4>
-                    <p>Önceden eğitilmiş InceptionV3 modeli, resmi analiz ederek tümör olasılığını tahmin eder.</p>
+                    <p>ONNX formatındaki derin öğrenme modeli, resmi analiz ederek sonuçları belirler.</p>
                 </div>
                 <div class="step">
                     <i class="fas fa-poll"></i>
                     <h4>4. Sonuç</h4>
-                    <p>Tahmin sonucu ("Sağlıklı" veya "Tümörlü") kullanıcıya gösterilir.</p>
+                    <p>Tahmin sonucu (Sağlıklı, Enfarkt, Tümör, Kanama) kullanıcıya gösterilir.</p>
                 </div>
             </div>
         </section>
 
         <section class="info-section" id="projectInfoSection">
             <h2>Proje Hakkında</h2>
-            <p>Bu proje, derin öğrenme teknikleri kullanarak beyin taramalarındaki tümörleri tespit etmeyi amaçlayan bir web uygulamasıdır. Şu anki versiyon, planlanan sistemin bir önizlemesi ve simülasyonudur.</p>
-            <p><strong>Teknoloji (Planlanan):</strong> Python (Flask/FastAPI), TensorFlow/Keras (InceptionV3 Transfer Learning), HTML, CSS, JavaScript.</p>
-            <p>Bu demo, <strong>"Genç Beyinler Yeni Fikirler"</strong> Sempozyumu için hazırlanmıştır.</p>
-            </div>
+            <p>Bu proje, derin öğrenme teknikleri kullanarak beyin taramalarındaki anormallikleri tespit etmeyi amaçlayan bir web uygulamasıdır.</p>
+            <p><strong>Teknoloji:</strong> Python (FastAPI), ONNX Runtime, HTML, CSS, JavaScript.</p>
+            <p>Proje <strong>İzmir Ekonomi Üniversitesi</strong> için geliştirilmiştir.</p>
         </section>
 
         <footer>
-            <p>Beyin Tümörü Tespit Sistemi | İzmir Ekonomi Üniversitesi | Genç Beyinler Yeni Fikirler</p>
+            <p>Beyin Taraması Analiz Sistemi &copy; 2024 | İzmir Ekonomi Üniversitesi | Tüm hakları saklıdır.</p>
         </footer>
     </div>
 

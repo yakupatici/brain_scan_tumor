@@ -96,9 +96,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleFileSelect(file) {
         // Check if file is an image
         if (!file.type.match('image.*')) {
-            alert('Please select an image file (JPEG, PNG, etc.)');
+            alert('Lütfen bir görüntü dosyası seçin (JPEG, PNG, vb.)');
             return;
         }
+        
+        console.log('Dosya seçildi:', file.name, 'Boyut:', file.size, 'Tip:', file.type);
         
         // Show preview
         const reader = new FileReader();
@@ -113,64 +115,96 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Handle example image selection
     function handleExampleSelect(imgSrc, resultType) {
+        console.log('Örnek görüntü seçildi:', imgSrc, 'Tip:', resultType);
         imagePreview.src = imgSrc;
         currentAnalysisResult = resultType; // Set the expected result for this example
         showSection(previewSection);
     }
     
     function analyzeImage() {
+        console.log('Görüntü analizi başlatılıyor...');
+        
         showSection(resultsSection);
         loader.style.display = 'flex';
         resultDisplay.style.display = 'none';
         newScanBtn.style.display = 'none'; // Hide button initially
         
-        // Get file
-        const file = imageUpload.files.length > 0 ? imageUpload.files[0] : null;
-        const formData = new FormData();
+        // Önce API'yi manuel olarak uyandıralım
+        fetch('https://brain-scan-api.onrender.com', { method: 'GET' })
+            .then(response => {
+                console.log('API uyandırma yanıtı:', response.status);
+                startAnalysis();
+            })
+            .catch(error => {
+                console.error('API uyandırma hatası:', error);
+                startAnalysis(); // Yine de analizi başlatalım
+            });
         
-        try {
-            if (file) {
-                // User uploaded file
-                formData.append('file', file);
-            } else if (imagePreview.src && imagePreview.src !== '#' && imagePreview.src !== '') {
-                // Example image was used - fetch it as blob
-                fetch(imagePreview.src)
-                    .then(response => response.blob())
-                    .then(blob => {
-                        formData.append('file', blob, 'image.jpg');
-                        callApi(formData);
-                    })
-                    .catch(error => {
-                        showError('Görüntü işlenirken hata oluştu: ' + error.message);
-                    });
-                return; // Exit early as we'll call the API in the promise chain
-            } else {
-                showError('Lütfen bir görüntü yükleyin');
-                return;
+        function startAnalysis() {
+            // Get file
+            const file = imageUpload.files.length > 0 ? imageUpload.files[0] : null;
+            const formData = new FormData();
+            
+            try {
+                if (file) {
+                    // User uploaded file
+                    console.log('Kullanıcı yüklediği dosya işleniyor');
+                    formData.append('file', file);
+                    callApi(formData);
+                } else if (imagePreview.src && imagePreview.src !== '#' && imagePreview.src !== '') {
+                    // Example image was used - fetch it as blob
+                    console.log('Örnek görüntü işleniyor:', imagePreview.src);
+                    fetch(imagePreview.src)
+                        .then(response => response.blob())
+                        .then(blob => {
+                            console.log('Görüntü blob olarak alındı:', blob.type, blob.size);
+                            formData.append('file', blob, 'image.jpg');
+                            callApi(formData);
+                        })
+                        .catch(error => {
+                            console.error('Blob alma hatası:', error);
+                            showError('Görüntü işlenirken hata oluştu: ' + error.message);
+                        });
+                } else {
+                    console.error('Görüntü bulunamadı');
+                    showError('Lütfen bir görüntü yükleyin');
+                }
+            } catch (error) {
+                console.error('Analiz başlatma hatası:', error);
+                showError('İşlem sırasında hata oluştu: ' + error.message);
             }
-            
-            // If we have a direct file (not from example), call API directly
-            callApi(formData);
-            
-        } catch (error) {
-            showError('İşlem sırasında hata oluştu: ' + error.message);
         }
         
         function callApi(formData) {
             // API URL - replace with your Render URL
             const apiUrl = 'https://brain-scan-api.onrender.com/predict';
             
+            console.log('API isteği gönderiliyor:', apiUrl);
+            
+            // API çağrısı için timeout ayarlayalım
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.error('API isteği zaman aşımına uğradı');
+                controller.abort();
+            }, 120000); // 2 dakika timeout
+            
             fetch(apiUrl, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                signal: controller.signal
             })
             .then(response => {
+                console.log('API yanıtı alındı:', response.status, response.statusText);
+                
                 if (!response.ok) {
-                    throw new Error(`Sunucu hatası: ${response.status}`);
+                    throw new Error(`Sunucu hatası: ${response.status} - ${response.statusText}`);
                 }
                 return response.json();
             })
             .then(result => {
+                // Log the full response
+                console.log('API sonucu:', result);
+                
                 // Display results
                 loader.style.display = 'none';
                 resultDisplay.style.display = 'block';
@@ -194,14 +228,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 confidenceScore.textContent = `Tahmin Güveni: %${confidence}`;
+                
+                // Ayrıntılı sonuçları da gösterelim
+                if (result.all_scores) {
+                    let scoresText = 'Tüm sonuçlar: ';
+                    Object.entries(result.all_scores).forEach(([key, value]) => {
+                        scoresText += `${key}: %${value}, `;
+                    });
+                    // Son virgülü kaldır
+                    scoresText = scoresText.slice(0, -2);
+                    const allScoresElement = document.createElement('p');
+                    allScoresElement.className = 'all-scores';
+                    allScoresElement.textContent = scoresText;
+                    document.querySelector('.result-text').appendChild(allScoresElement);
+                }
+                
                 currentAnalysisResult = null;
             })
             .catch(error => {
+                console.error('API isteği hatası:', error);
                 showError(error.message);
+            })
+            .finally(() => {
+                clearTimeout(timeoutId);
             });
         }
         
         function showError(message) {
+            console.error('Hata gösteriliyor:', message);
             loader.style.display = 'none';
             resultDisplay.style.display = 'block';
             resultTitle.textContent = 'İşlem Hatası';
@@ -220,10 +274,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function resetAll() {
         resetUpload();
-        // Optionally hide results immediately or let showSection handle it
-        // resultsSection.style.display = 'none';
-        // resultsSection.style.opacity = '0';
+        // Temizlik: eklenen ayrıntılı sonuçları kaldıralım
+        const allScoresElement = document.querySelector('.all-scores');
+        if (allScoresElement) {
+            allScoresElement.remove();
+        }
     }
+
+    // API'yi başlangıçta uyandır
+    fetch('https://brain-scan-api.onrender.com')
+        .then(response => console.log('API hazır:', response.status))
+        .catch(error => console.log('API uyandırma hatası (önemli değil):', error));
 
     // Ensure initial state respects transitions
     resetAll(); // Call resetAll to set the initial view correctly
