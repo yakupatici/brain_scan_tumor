@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const exampleScanButtons = document.querySelectorAll('.example-btn'); // Added example buttons
 
     // API Configuration
-    const API_URL = 'https://brain-scan-api-production.up.railway.app';
+    const API_URL = 'https://brainscanapi-production.up.railway.app';
     const USE_REAL_API = true; // API modunu kontrol eden değişken (false: simülasyon modu, true: gerçek API modu)
 
     let currentAnalysisResult = null; // To store the result type for example scans
