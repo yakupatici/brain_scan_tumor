@@ -1,6 +1,6 @@
 # Brain Scan Tumor Detector (Frontend)
 
-A frontend web application for visualizing the detection of tumors in brain scan images (CT or MRI).
+A frontend web application for visualizing the detection of tumors in brain scan images (BT).
 
 ## Overview
 
